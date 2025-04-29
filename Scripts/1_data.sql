@@ -2,10 +2,12 @@
 INSERT INTO rango_edad(etiqueta) VALUES 
 ('Niño'),
 ('Adulto');
+
 INSERT INTO genero(etiqueta) VALUES 
 ('Masculino'),
 ('Femenino'),
 ('Unisex');
+
 INSERT INTO categoria(nombre_categoria) VALUES
 ('Camisa'),
 ('Pantalón'),
@@ -17,6 +19,7 @@ INSERT INTO categoria(nombre_categoria) VALUES
 ('Abrigo'),
 ('Traje'),
 ('Short');
+
 INSERT INTO marcas(nombre_marca) VALUES
 ('Zara'),
 ('Adidas'),
@@ -28,6 +31,7 @@ INSERT INTO marcas(nombre_marca) VALUES
 ('Under Armour'),
 ('Gucci'),
 ('Prada');
+
 INSERT INTO tipos_cambio_stock(tipo) VALUES 
 ('VENTA'),
 ('AJUSTE');
@@ -134,6 +138,7 @@ INSERT INTO clientes(nombre,apellido) VALUES
 ('Luis', 'Morales'),
 ('Beatriz', 'López'),
 ('Jorge', 'Castillo');
+
 INSERT INTO cliente_telefonos(id_cliente,telefono) VALUES
 (1, '580-3705'),
 (2, '587-7932'),
@@ -235,6 +240,7 @@ INSERT INTO cliente_telefonos(id_cliente,telefono) VALUES
 (98, '535-3414'),
 (99, '541-8784'),
 (100, '519-8461');
+
 INSERT INTO cliente_direcciones(id_cliente,direccion) VALUES
 (1, 'Calle 17 Zona 5, Ciudad de Guatemala'),
 (2, 'Calle 30 Zona 4, Ciudad de Guatemala'),
@@ -541,6 +547,7 @@ INSERT INTO prendas(nombre_prenda,descripcion,precio_actual,id_marca,id_categori
 ('Abrigo Deportiva Blanco', 'Abrigo Deportiva Blanco de alta calidad', 410.53, 8, 8, 1, 2),
 ('Traje Con Capucha Rojo', 'Traje Con Capucha Rojo de alta calidad', 421.48, 9, 9, 2, 1),
 ('Short Clásica Verde', 'Short Clásica Verde de alta calidad', 440.53, 10, 10, 1, 3);
+
 INSERT INTO inventario(id_prenda,stock) VALUES
 (1, 38),
 (2, 86),
@@ -642,6 +649,7 @@ INSERT INTO inventario(id_prenda,stock) VALUES
 (98, 46),
 (99, 49),
 (100, 38);
+
 INSERT INTO historial_precios(id_prenda, fecha_realizacion, precio_pasado, precio_nuevo, diferencia_precio) VALUES
 (1, NOW() - INTERVAL '1 days', 233.01, 247.85, 14.84),
 (2, NOW() - INTERVAL '2 days', 141.9, 153.87, 11.97),
@@ -845,6 +853,7 @@ INSERT INTO ventas(id_cliente, id_direccion, fecha_realizacion) VALUES
 (98, 98, NOW() - INTERVAL '97 hours'),
 (99, 99, NOW() - INTERVAL '117 hours'),
 (100, 100, NOW() - INTERVAL '41 hours');
+
 INSERT INTO venta_detalles(id_venta, id_prenda, precio_venta, cantidad, monto) VALUES
 (1, 1, 247.85, 2, 495.7),
 (2, 2, 153.87, 1, 153.87),
