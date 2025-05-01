@@ -2,11 +2,20 @@ import express from 'express';
 import dotenv from 'dotenv';
 import pkg from 'pg';
 
-dotenv.config();      
+dotenv.config();    
+
 const { Pool } = pkg;
 
 const app = express();
 app.use(express.json());
+
+// Habilitar CORS para todas las rutas
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 // Conecta a Postgres usando las vars de entorno
 const pool = new Pool({
@@ -32,6 +41,19 @@ app.get('/categories', async (req, res) => {
     return res.status(500).json({ error: 'Error al obtener categorías' });
   }
 });
+
+// Obtener rangos de edad que se manejan
+app.get('/age-ranges', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT etiqueta FROM rango_edad;'
+    )
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching age ranges', err);
+    return res.status(500).json({ error: 'Error al obtener rangos de edad' });
+  }
+})
 
 // Obtener todas las marcas
 app.get('/brands', async (req, res) => {
@@ -97,7 +119,7 @@ app.get('/top-customers', async (req, res) => {
       idx++;
     }
 
-    // Condiciones dinámicas para HAVING (filtros por agregados)
+    // Condiciones dinámicas para HAVING (Para el monto)
     const havingConditions = [];
     if (minAmount) {
       havingConditions.push(`SUM(vd.monto) >= $${idx}`);
@@ -112,12 +134,12 @@ app.get('/top-customers', async (req, res) => {
         c.nombre,
         c.apellido,
         SUM(vd.monto) AS total_gastado
-      FROM clientes c
-      JOIN ventas v ON c.id = v.id_cliente
-      JOIN venta_detalles vd ON v.id = vd.id_venta
-      JOIN prendas p ON vd.id_prenda = p.id
-      JOIN categoria cat ON p.id_categoria = cat.id
-      JOIN marcas m ON p.id_marca = m.id
+      FROM clientes AS c
+      JOIN ventas AS v ON c.id = v.id_cliente
+      JOIN venta_detalles AS vd ON v.id = vd.id_venta
+      JOIN prendas AS p ON vd.id_prenda = p.id
+      JOIN categoria AS cat ON p.id_categoria = cat.id
+      JOIN marcas AS m ON p.id_marca = m.id
       WHERE ${whereConditions.join(' AND ')}
       GROUP BY c.id, c.nombre, c.apellido`;
 
@@ -175,7 +197,7 @@ app.get('/top-products', async (req, res) => {
       idx++;
     }
 
-    // Condiciones para monto
+    // Condiciones para monto, con having ser sum
     if (minAmount) {
       havingConditions.push(`SUM(vd.monto) >= $${idx}`);
       values.push(parseFloat(minAmount));
@@ -185,8 +207,9 @@ app.get('/top-products', async (req, res) => {
     // Construir la consulta SQL
     let query = `
       SELECT
-        p.id,
         p.nombre_prenda,
+        cat.nombre_categoria,
+        m.nombre_marca,
         SUM(vd.monto) AS total_vendido,
         SUM(vd.cantidad) AS unidades_vendidas
       FROM prendas AS p
@@ -195,7 +218,7 @@ app.get('/top-products', async (req, res) => {
       JOIN categoria AS cat ON p.id_categoria = cat.id
       JOIN marcas AS m ON p.id_marca = m.id
       WHERE ${whereConditions.join(' AND ')}
-      GROUP BY p.id, p.nombre_prenda`;
+      GROUP BY p.id, p.nombre_prenda, cat.nombre_categoria, m.nombre_marca`;
 
     if (havingConditions.length > 0) {
       query += `
@@ -256,18 +279,18 @@ app.get('/inventory', async (req, res) => {
     // Construir la consulta SQL
     let query = `
       SELECT
-      p.id,
-      p.nombre_prenda,
-      p.precio_actual,
-      cat.nombre_categoria AS category,
-      m.nombre_marca AS brand,
-      g.etiqueta AS gender,
-      i.stock
-      FROM prendas p
-      JOIN inventario i ON p.id = i.id_prenda
-      JOIN categoria cat ON p.id_categoria = cat.id
-      JOIN marcas m ON p.id_marca = m.id
-      JOIN genero g ON p.id_genero = g.id
+        p.id,
+        p.nombre_prenda,
+        p.precio_actual,
+        cat.nombre_categoria AS categoria,
+        m.nombre_marca AS marca,
+        g.etiqueta AS genero,
+        i.stock
+      FROM prendas AS p
+      JOIN inventario AS i ON p.id = i.id_prenda
+      JOIN categoria AS cat ON p.id_categoria = cat.id
+      JOIN marcas AS m ON p.id_marca = m.id
+      JOIN genero AS g ON p.id_genero = g.id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY i.stock DESC
       LIMIT 10;
@@ -332,14 +355,14 @@ app.get('/frequent-customers', async (req, res) => {
         c.id,
         c.nombre,
         c.apellido,
-        COUNT(DISTINCT v.id)        AS total_compras,
-        SUM(vd.monto)               AS total_gastado
-      FROM clientes c
-      JOIN ventas v       ON c.id = v.id_cliente
-      JOIN venta_detalles vd ON v.id = vd.id_venta
-      JOIN prendas p      ON vd.id_prenda = p.id
-      JOIN categoria cat  ON p.id_categoria = cat.id
-      JOIN genero g       ON p.id_genero = g.id
+        COUNT(v.id) AS total_compras,
+        SUM(vd.monto) AS total_gastado
+      FROM clientes AS c
+      JOIN ventas AS v ON c.id = v.id_cliente
+      JOIN venta_detalles AS vd ON v.id = vd.id_venta
+      JOIN prendas AS p ON vd.id_prenda = p.id
+      JOIN categoria AS cat ON p.id_categoria = cat.id
+      JOIN genero AS g ON p.id_genero = g.id
       WHERE ${whereConditions.join(' AND ')}
       GROUP BY c.id, c.nombre, c.apellido`;
 
@@ -408,20 +431,21 @@ app.get('/price-history', async (req, res) => {
     // Montar consulta
     const query = `
       SELECT
-      hp.id,
-      hp.id_prenda,
-      p.nombre_prenda,
-      hp.fecha_realizacion,
-      hp.precio_pasado,
-      hp.precio_nuevo,
-      hp.diferencia_precio
-      FROM historial_precios hp
-      JOIN prendas p ON hp.id_prenda = p.id
-      JOIN marcas m ON p.id_marca = m.id
-      JOIN categoria cat ON p.id_categoria = cat.id
-      JOIN genero g ON p.id_genero = g.id
+        hp.id,
+        p.nombre_prenda,
+        cat.nombre_categoria,
+        m.nombre_marca,
+        hp.fecha_realizacion,
+        hp.precio_pasado,
+        hp.precio_nuevo,
+        hp.diferencia_precio
+      FROM historial_precios AS hp
+      JOIN prendas AS p ON hp.id_prenda = p.id
+      JOIN marcas AS m ON p.id_marca = m.id
+      JOIN categoria AS cat ON p.id_categoria = cat.id
+      JOIN genero AS g ON p.id_genero = g.id
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY hp.fecha_realizacion DESC
+      ORDER BY diferencia_precio DESC
       LIMIT 20;
     `;
 

@@ -5,6 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reportes</title>
+    
     <style>
         * {
             margin: 0;
@@ -74,13 +75,13 @@
           display: none;
           margin-top: 1.5rem;
         }
-        .form-group {
+        .filter-group {
             position: relative;
             margin-top: 1.5rem;
             width: 200px;
         }
 
-        .form-group select {
+        .filter-group select {
             width: 100%;
             padding: 1.2rem 0.5rem 0.5rem;
             border: 1px solid var(--primary);
@@ -90,7 +91,7 @@
             color: #333;
         }
 
-        .form-group label {
+        .filter-group label {
             position: absolute;
             top: 0.6rem;
             left: 0.5rem;
@@ -102,8 +103,8 @@
             pointer-events: none;
         }
 
-        .form-group select:focus + label,
-        .form-group select:not(:placeholder-shown) + label {
+        .filter-group select:focus + label,
+        .filter-group select:not(:placeholder-shown) + label {
             top: -0.6rem;
             left: 0.4rem;
             font-size: 1rem;
@@ -138,6 +139,30 @@
         .button-container {
           align-self: flex-end;
         }
+        #filtrosContainer.show {
+          display: flex !important;
+        }
+        #toggleContent.show {
+          display: block !important;
+          margin-top: 1.5rem;
+        }
+        table {
+          border-collapse: collapse;
+          width: 100%;
+          margin-bottom: 1rem;
+        }
+        table, th, td {
+          border: 1px solid #ddd;
+        }
+        th, td {
+          padding: 8px;
+          text-align: left;
+        }
+        canvas {
+          max-width: 100%;
+          height: 300px;
+          margin-bottom: 1rem;
+        }
     </style>
 </head>
 
@@ -148,159 +173,421 @@
     <!-- React -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- CDN para hacer graficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Permite expoertar pdfs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Permite tomar capturas de lo que se muestra, es lo que se le pasa a JSpdf <==== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- SCRIPT ///////////////////////////////////////////////////////////// -->
+    <!-- ////////////////////////////////////////////////////////////////// -->
     <script type="text/babel">
-        //CAMBIAR A LA QUE CORRESPONDA AL usuarios
-    const apiUrl = "http://localhost:3000/";
-    const { useState } = React;
+    const { useState, useRef, useEffect } = React;
+    
+    // Cambiar esto por la URL que se deje para el API
+    const apiUrl = "http://localhost:3000";
 
-        //   Un dropdown
-    function FilterSelect({ id, value, onChange, label, options }) {
-        return (
-            <div className="form-group">
-            <select
-                id={id}
-                value={value}
-                onChange={e => onChange(e.target.value)}
-                placeholder=" "
-            >
-                <option value="" />
-                {options.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-                ))}
+    
+    // Contenedor de filtros
+    function FiltersGroup({ id, label, options, value, onChange }) {
+      return (
+          <div className="filter-group">
+
+            <select id={id} value={value} onChange={e => onChange(e.target.value)} placeholder=" ">
+              <option value="" />
+              {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
+
             <label htmlFor={id}>{label}</label>
-            </div>
-        );
-    }
 
-    //   Contenedor de filtros
-    function FiltersPanel({ show, filters, setFilters, applyFilters }) {
-        if (!show) return null;
-        return (
-            <div id="filtrosContainer" style={{display: "flex"}}>
-            <FilterSelect
-                id="marca"
-                label="Marca"
-                value={filters.marca}
-                onChange={val => setFilters(prev => ({ ...prev, marca: val }))}
-                options={["Zara","Adidas","Puma","Nike","Gap","H&M","Levis","Under Armour","Gucci","Prada"]}
-            />
-            <FilterSelect
-                id="edad"
-                label="Rango de Edad"
-                value={filters.edad}
-                onChange={val => setFilters(prev => ({ ...prev, edad: val }))}
-                options={["Niño","Adulto"]}
-            />
-            <FilterSelect
-                id="genero"
-                label="Género"
-                value={filters.genero}
-                onChange={val => setFilters(prev => ({ ...prev, genero: val }))}
-                options={["Masculino","Femenino","Unisex"]}
-            />
-            <FilterSelect
-                id="categoria"
-                label="Categoría"
-                value={filters.categoria}
-                onChange={val => setFilters(prev => ({ ...prev, categoria: val }))}
-                options={["Camisa","Pantalón","Falda","Chaqueta","Vestido","Zapatos","Sudadera","Abrigo","Traje","Short"]}
-            />
-            <div className="button-container">
-                <button onClick={applyFilters}>Generar Reporte</button>
-            </div>
-            </div>
-        );
-    }
-
-    //   Header de un reporte con su flecha
-    function ReportHeader({ title, showFilters, onToggle }) {
-        return (
-            <div className="report-header">
-            <h2 className="report-title">{title}</h2>
-            <span
-                id="toggleArrow"
-                onClick={onToggle}
-                style={{cursor: "pointer", userSelect: "none"}}
-                aria-label={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") onToggle(); }}
-            >
-                {showFilters ? "\u25BC" : "\u25B2"}
-            </span>
-            </div>
-        );
-    }
-
-    function ReportSection() {
-        const [showFilters, setShowFilters] = useState(false);
-        const [filters, setFilters] = useState({
-          marca: "",
-          edad: "",
-          genero: "",
-          categoria: ""
-        });
-        const [reportContent, setReportContent] = useState("");
-
-        const toggleFilters = () => {
-          setShowFilters(prev => !prev);
-          setReportContent("");
-        };
-
-        const applyFilters = () => {
-          setReportContent(
-            `Reporte generado con filtros: Marca=${filters.marca || "Todos"}, Edad=${filters.edad || "Todos"}, Género=${filters.genero || "Todos"}, Categoría=${filters.categoria || "Todos"}`
-          );
-        };
-
-        return (
-          <section className="report-section">
-            <div className="report-container">
-              <ReportHeader
-                title="Reporte de usuarios con más ventas"
-                showFilters={showFilters}
-                onToggle={toggleFilters}
-              />
-              <FiltersPanel
-                show={showFilters}
-                filters={filters}
-                setFilters={setFilters}
-                applyFilters={applyFilters}
-              />
-              <div id="toggleContent" style={{ marginTop: "1.5rem" }}>
-                {reportContent && <p>{reportContent}</p>}
-              </div>
-            </div>
-          </section>
-        );
-    }
-
-    function App() {
-        return (
-            <>
-            <header>
-                <h1 className="header-title">Reportes</h1>
-            </header>
-
-            <section className="description">
-                <p className="description-text">
-                Este sistema permite generar reportes visuales de las ventas y el inventario.
-                </p>
-                <hr />
-            </section>
-
-            <ReportSection />
-            </>
+          </div>
     );
     }
 
-    const rootElement = document.getElementById("root");
-    ReactDOM.createRoot(rootElement).render(<App />);
+    // Toggle icon
+    function FilterToggle({ show, onToggle }) {
+      return (
+          <span
+          id="toggleArrow"
+          onClick={onToggle}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => (e.key === 'Enter'||e.key===' ') && onToggle()}
+          >
+          {show ? "\u25BC" : "\u25B2"}
+          </span>
+      );
+    }
+
+    // Panel completo de filtros con el boton de generar
+    function FiltersForm({ visible, filters, setFilters, onApply, configs }) {
+      if (!visible) return null;
+      return (
+          <div id="filtrosContainer" className="show">
+
+            {configs.map(({ id, label, options }) => (
+                <FiltersGroup
+                key={id}
+                id={id}
+                label={label}
+                options={options}
+                value={filters[id]||""}
+                onChange={val => setFilters(prev => ({...prev, [id]: val}))}
+                />
+            ))}
+
+            <div className="button-container">
+                <button onClick={onApply}>Generar Reporte</button>
+            </div>
+          </div>
+      );
+    }
+
+    // Generic report section
+    function ReportSection({ title, endpoint, configs }) {
+
+      const [show, setShow] = useState(false);
+
+      // Si se activa limpia la data y destruye el grafico
+      const toggle = () => {
+          setShow(!show);
+          setData([]);
+          if (chartInst.current) { chartInst.current.destroy(); }
+      };
+
+
+      const [filters, setFilters] = useState({});
+      const [data, setData] = useState([]);
+
+      // Se le asignara el div de rsults-content
+      const resultsRef = useRef(null);
+      const chartRef = useRef(null);
+      const chartInst = useRef(null);
+
+
+
+      // Ejecutar Query y sacar el json
+      const getData = async () => {
+        // Convertir filters a un array
+        const query = Object.entries(filters)
+          //Filtrar los filtros vacios
+          .filter(([filterKey, filterValue]) => filterValue) 
+          // Convertir a string para metero en la url del endpoint
+          .map(([filterKey, filterValue]) => `${filterKey}=${encodeURIComponent(filterValue)}`)
+          .join("&");
+
+        try {
+          const response = await fetch(`${apiUrl}${endpoint}?${query}`);
+          const resultData = await response.json();
+          setData(resultData);
+
+        } 
+        catch (error) {
+          console.error("Error al obtener datos del servidor:", error);
+          setData([]); 
+        }
+      };
+
+
+      // actualizar el grafico cada que la data en la seccion cambie
+      useEffect(() => {
+        //Validar que haya data y que el gráfico exista
+        if (data.length > 0 && chartRef.current) {
+
+          // Si ya se tenia un grafico, se destruye, y se genera el nuevo
+          if (chartInst.current) chartInst.current.destroy();
+
+          // Sacar las labels para el grafico
+          const labels = data.map(item =>
+            // Ir probando para ver que puede ser el label para el eje X
+            item.nombre_prenda || `${item.nombre} ${item.apellido}` || item.id
+          );
+
+          // Jalar el ultimo dato que viene del query
+          // Ese ultimo elemento es el que tiene el elemento de interes a mostrar
+          const values = data.map(item =>
+            Object.values(item).slice(-1)[0]
+          );
+
+          // Apunta al canvas de HTML, y obtiene el contexto
+          const ctx = chartRef.current.getContext("2d");
+
+          // Genera un grafico de barras tras pasarle el contexto
+          // utiliza los labels, el title, y los values que se jalaron con el slice
+          chartInst.current = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: title, data: values }] }
+          });
+        }
+        // Se ejecuta cada que cambia la data
+      }, [data]);
+
+
+
+      // Exportar a PDF
+      const exportPdf = () => {
+        // Obtener la seccion de reporte correspondiente
+        const content = resultsRef.current;
+        if (!content) return;
+
+        // Toma una captura de lo que se tiene en content
+        html2canvas(content).then(canvas => {
+          // transforma el canvas en imagen 
+          const img = canvas.toDataURL('image/png');
+
+          // jalamos la libreria para pdfs
+          const { jsPDF } = window.jspdf;
+          // Se configura el pdf para ser horizontal, con unidades pt y en tamanio A4
+          const pdf = new jsPDF('l','pt','a4');
+
+          // Se coloca la imagen desde el extremo izuquierdo superior
+          // y se le da el tamaño del pdf
+          pdf.addImage(img, 'PNG',
+            0, 0,
+            pdf.internal.pageSize.getWidth(),
+            pdf.internal.pageSize.getHeight()
+          );
+
+          // Se genera un timestamp
+          const ts = new Date().toISOString().replace(/[:.]/g,'-');
+
+          // Se guarda el pdf con el titulo y el timestamp
+          pdf.save(`${title}-${ts}.pdf`);
+        });
+      };
+
+
+      
+      // Exportar a CSV
+      const exportCsv = () => {
+          // Validar que haya data
+          if (data.length === 0) return;
+
+          // Sacar los headers acorde a las keys
+          const headers = Object.keys(data[0]);
+
+          // Construccion de string separado por comas
+          const rows = data.map(row =>
+              headers.map(h => row[h]).join(',')
+          );
+
+          // Se construye el CSV completo, colocando saltos de lineas al finalizar un row
+          const csvContent = [ headers.join(','), ...rows ].join('\n');
+
+          // Genera el archivo CSV
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+
+          // Se crea un enlace para descargar el csv
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+
+          // Se obtiene la fecha y hora actual
+          const ts = new Date().toISOString().replace(/[:.]/g,'-');
+
+          // Se asigna nombre y se descarga con el titulo y el timestamp
+          a.download = `${title}-${ts}.csv`;
+          a.click();
+
+          // libera memoria usada por la url de descarga
+          URL.revokeObjectURL(url);
+      };
+
+      return (
+          <section id={`section-${endpoint}`} className="report-section">
+            <div className="report-container">
+
+                <div className="report-header">
+                  <h2 className="report-title">{title}</h2>
+                  <FilterToggle show={show} onToggle={toggle}/>
+                </div>
+
+                <FiltersForm
+                  visible={show}
+                  filters={filters}
+                  setFilters={setFilters}
+                  onApply={getData}
+                  configs={configs}
+                />
+                
+                <div id="toggleContent" className={data.length?"show":""}>
+                  
+                  {data.length>0 && (
+                      <>
+                      <div id="results-content" ref={resultsRef}>
+                          <table>
+                    
+                          <thead>
+                            <tr>
+                            {Object.keys(data[0]).map(k=> 
+                              // por cada key se crea un th con lo qeu diga el key
+                              <th key={k}>{k}</th>)
+                            }
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {data.map((row, rowIndex) => (
+                              // Por cada row se crea un tr
+                              <tr key={rowIndex}>
+                                {Object.values(row).map((cellValue, cellIndex) => (
+                                  // por cada valor en el registro se deja un td
+                                  <td key={cellIndex}>{cellValue}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+
+                          </table>
+
+                          <canvas ref={chartRef}></canvas>
+
+                        </div>
+
+                        <div className="button-container">
+                          <button onClick={exportPdf}>Exportar PDF</button>
+                          <button onClick={exportCsv} style={{ marginLeft: '0.5rem' }}>Exportar CSV</button>
+                        </div>
+
+                      </>
+                  )}
+
+                </div>
+            </div>
+          </section>
+      );
+    }
+
+function App() {
+  // Hooks para filtros dinámicos
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [genders, setGenders] = useState([]);
+  const [ageRanges, setAgeRanges] = useState([]);
+
+  // Se ejecuta una sola vez
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const catRes = await fetch(`${apiUrl}/categories`);
+        const catJson = await catRes.json();
+        setCategories(catJson.map(r => r.nombre_categoria));
+
+        const brandRes = await fetch(`${apiUrl}/brands`);
+        const brandJson = await brandRes.json();
+        setBrands(brandJson.map(r => r.nombre_marca));
+
+        const genderRes = await fetch(`${apiUrl}/genders`);
+        const genderJson = await genderRes.json();
+        setGenders(genderJson.map(r => r.etiqueta));
+
+        const ageRes = await fetch(`${apiUrl}/age-ranges`);
+        const ageJson = await ageRes.json();
+        setAgeRanges(ageJson.map(r => r.etiqueta));
+
+      } catch (error) {
+        console.error("Error cargando filtros:", error);
+      }
+    };
+
+    loadFilters();
+  }, []);
+
+  const monthsAgoOptions = ["1","2","3","4", "5", "6", "7", "8", "9", "10", "11", "12"];
+
+  // Configuracion Basica de lo que se muestra x report section
+  const reportConfigs = [
+
+      {
+        title: "Clientes con más gastos",
+        endpoint: "/top-customers",
+        configs: [
+          { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
+          { id: "category", label: "Categoría", options: categories },
+          { id: "brand", label: "Marca", options: brands },
+          { id: "minAmount", label: "Gasto Mínimo", options: ["100","500","1000"] }
+        ]
+      },
+
+      {
+        title: "Productos más vendidos (por monto monetario)",
+        endpoint: "/top-products",
+        configs: [
+          { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
+          { id: "category", label: "Categoría", options: categories },
+          { id: "brand", label: "Marca", options: brands },
+          { id: "minAmount", label: "Gasto Mínimo", options: ["100","500","1000"] }
+        ]
+      },
+
+      {
+        title: "Prendas con mayor stock",
+        endpoint: "/inventory",
+        configs: [
+          { id: "category", label: "Categoría", options: categories },
+          { id: "brand", label: "Marca", options: brands },
+          { id: "gender", label: "Género", options: genders },
+          { id: "minAmount", label: "Precio Mínimo", options: ["0","100","500"] }
+        ]
+      },
+
+      {
+        title: "Clientes con mayor cantidad de compras",
+        endpoint: "/frequent-customers",
+        configs: [
+          { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
+          { id: "category", label: "Categoría", options: categories },
+          { id: "gender", label: "Género", options: genders },
+          { id: "minAmount", label: "Monto Mínimo", options: ["100","500","1000"] }
+        ]
+      },
+
+      {
+        title: "Comparación: precio pasado vs actual",
+        endpoint: "/price-history",
+        configs: [
+          { id: "ageRanges", label: "Rango de Edad", options: ageRanges },
+          { id: "brand", label: "Marca", options: brands },
+          { id: "category", label: "Categoría", options: categories },
+          { id: "gender", label: "Género", options: genders }
+        ]
+      }
+
+    ];
+
+    return (
+        <>
+        <header>
+            <h1 className="header-title">Reportes</h1>
+        </header>
+
+        <section className="description">
+            <p className="description-text">
+            Este sistema permite generar reportes visuales de ventas e inventario.
+            </p>
+            <hr/>
+        </section>
+          {reportConfigs.map(rc=>(
+            // Se pasa la info basica de cada seccion para su renderizado
+              <ReportSection
+                key={rc.endpoint}
+                title={rc.title}
+                endpoint={rc.endpoint}
+                configs={rc.configs}
+              />
+          ))}
+        </>
+    );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
     </script>
 </body>
 

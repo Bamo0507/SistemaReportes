@@ -1,21 +1,26 @@
-version: "3.8"
-
 services:
-  # ──────────────── PostgreSQL ────────────────
   db:
     image: postgres:14-alpine
-    env_file: .env            # credenciales y nombre de la BD
+    env_file: .env.example // cambiar al .env
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - ./Scripts:/docker-entrypoint-initdb.d:ro
 
-  # ──────────────── API backend ───────────────
   backend:
     build:
-      context: ./backend       # Dockerfile y código del backend
-    env_file: .env            
+      context: ./backend
+    env_file: .env.example // cambiar a .env
     depends_on:
       - db
     ports:
-      - "3000:3000"            # HOST:CONTENEDOR 
+      - "${PORT}:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+    env_file: .env.example // cambiar a .env
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT}:80"
