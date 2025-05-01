@@ -43,7 +43,7 @@
         hr {
           margin: 2vh auto;
           width: 90%;
-          border: 1px solid var(--accentLight);
+          border: 1px solid var(--accent);
         }
         section.report-section {
           padding: 0 4vw;
@@ -227,7 +227,7 @@
     }
 
     // Panel completo de filtros con el boton de generar
-    function FiltersForm({ visible, filters, setFilters, onApply, configs }) {
+    function FiltersForm({ visible, filters, setFilters, getData, configs }) {
       if (!visible) return null;
       return (
           <div id="filtrosContainer" className="show">
@@ -244,7 +244,7 @@
             ))}
 
             <div className="button-container">
-                <button onClick={onApply}>Generar Reporte</button>
+                <button onClick={getData}>Generar Reporte</button>
             </div>
           </div>
       );
@@ -413,7 +413,7 @@
                   visible={show}
                   filters={filters}
                   setFilters={setFilters}
-                  onApply={getData}
+                  getData={getData}
                   configs={configs}
                 />
                 
@@ -427,7 +427,7 @@
                           <thead>
                             <tr>
                             {Object.keys(data[0]).map(k=> 
-                              // por cada key se crea un th con lo qeu diga el key
+                              
                               <th key={k}>{k}</th>)
                             }
                             </tr>
@@ -435,10 +435,10 @@
 
                           <tbody>
                             {data.map((row, rowIndex) => (
-                              // Por cada row se crea un tr
+                              
                               <tr key={rowIndex}>
                                 {Object.values(row).map((cellValue, cellIndex) => (
-                                  // por cada valor en el registro se deja un td
+                                
                                   <td key={cellIndex}>{cellValue}</td>
                                 ))}
                               </tr>
@@ -506,7 +506,7 @@ function App() {
   const reportConfigs = [
 
       {
-        title: "Clientes con más gastos",
+        title: "Clientes con más gastos (por defecto de hace un mes)",
         endpoint: "/top-customers",
         configs: [
           { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
@@ -517,7 +517,7 @@ function App() {
       },
 
       {
-        title: "Productos más vendidos (por monto monetario)",
+        title: "Top productos por ingresos (por defecto de hace un mes)",
         endpoint: "/top-products",
         configs: [
           { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
@@ -534,12 +534,12 @@ function App() {
           { id: "category", label: "Categoría", options: categories },
           { id: "brand", label: "Marca", options: brands },
           { id: "gender", label: "Género", options: genders },
-          { id: "minAmount", label: "Precio Mínimo", options: ["0","100","500"] }
+          { id: "minAmount", label: "Precio Mínimo", options: ["100","500", "1000"] }
         ]
       },
 
       {
-        title: "Clientes con mayor cantidad de compras",
+        title: "Clientes con mayor cantidad de compras (por defecto de hace un mes)",
         endpoint: "/frequent-customers",
         configs: [
           { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
@@ -550,7 +550,7 @@ function App() {
       },
 
       {
-        title: "Comparación: precio pasado vs actual",
+        title: "Comparación: precio pasado vs actual (orden de diferencia de precio)",
         endpoint: "/price-history",
         configs: [
           { id: "ageRanges", label: "Rango de Edad", options: ageRanges },
@@ -575,7 +575,6 @@ function App() {
             <hr/>
         </section>
           {reportConfigs.map(rc=>(
-            // Se pasa la info basica de cada seccion para su renderizado
               <ReportSection
                 key={rc.endpoint}
                 title={rc.title}

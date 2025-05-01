@@ -137,9 +137,6 @@ CREATE TABLE venta_detalles (
 -- FUNCIONES CON SUS TRIGGERS
 -- ///////////////////////////////////
 -- Trigger para registrar cambios de precio en el historial_precios
--- Elimina la función anterior si ya existe
-DROP FUNCTION IF EXISTS fn_log_cambio_precio() CASCADE;
-
 CREATE OR REPLACE FUNCTION fn_log_cambio_precio()
 RETURNS TRIGGER AS $$
 BEGIN

@@ -233,8 +233,8 @@ app.get('/top-products', async (req, res) => {
     const result = await pool.query(query, values);
     return res.json(result.rows);
   } catch (err) {
-    console.error('Error en /top-products', err);
-    return res.status(500).json({ error: 'Error al obtener los productos mas vendidos' });
+    console.error('Error en /inventory', err);
+    return res.status(500).json({ error: 'Error al obtener inventario actual' });
   }
 });
 
@@ -385,67 +385,79 @@ app.get('/frequent-customers', async (req, res) => {
   }
 });
 
-// Endpoint: Cambios en el historial de precios
+// Endpoint: Cambios en el historial de precios (último registro por prenda, ordenado por diferencia de precio)
 /*
-Rango de meses hacia atras
-Marca
-Categoria
-Genero
+Recibe la categoria de edad 
+Marca de producto
+Categoria de producto
+Genero de producto
 */
 app.get('/price-history', async (req, res) => {
   try {
-    const { monthsAgo, brand, category, gender } = req.query;
+    const { ageRanges, brand, category, gender } = req.query;
 
-    // Hace un mes por default
-    const now = new Date();
-    const fromDate = new Date(
-      now.setMonth(now.getMonth() - (monthsAgo ? parseInt(monthsAgo) : 1))
-    );
+    // Construir condiciones dinámicas según filtros
+    const whereConditions = [];
+    const values = [];
+    let idx = 1;
 
-    // Condicion de fecha
-    const whereConditions = ['hp.fecha_realizacion >= $1'];
-    const values = [fromDate];
-    let idx = 2;
+    if (ageRanges) {
+      whereConditions.push(`re.etiqueta = $${idx}`);
+      values.push(ageRanges);
+      idx++;
+    }
 
-    // Condicion de marca
     if (brand) {
       whereConditions.push(`m.nombre_marca = $${idx}`);
       values.push(brand);
       idx++;
     }
 
-    // Condicion de categoria
     if (category) {
       whereConditions.push(`cat.nombre_categoria = $${idx}`);
       values.push(category);
       idx++;
     }
 
-    // Condicion de genero
     if (gender) {
       whereConditions.push(`g.etiqueta = $${idx}`);
       values.push(gender);
       idx++;
     }
 
-    // Montar consulta
+    const whereClause = whereConditions.length
+      ? 'WHERE ' + whereConditions.join(' AND ')
+      : '';
+
+    // Seleccionar sólo el último registro de historial por prenda
     const query = `
+      WITH latest_price AS (
+        SELECT DISTINCT ON (hp.id_prenda)
+          hp.id_prenda,
+          hp.precio_pasado,
+          hp.precio_nuevo,
+          hp.diferencia_precio
+        FROM historial_precios AS hp
+        ORDER BY hp.id_prenda, hp.fecha_realizacion DESC
+      )
       SELECT
-        hp.id,
+        p.id AS id_prenda,
         p.nombre_prenda,
         cat.nombre_categoria,
         m.nombre_marca,
-        hp.fecha_realizacion,
-        hp.precio_pasado,
-        hp.precio_nuevo,
-        hp.diferencia_precio
-      FROM historial_precios AS hp
-      JOIN prendas AS p ON hp.id_prenda = p.id
+        re.etiqueta AS rango_edad,
+        g.etiqueta AS genero,
+        lp.precio_pasado,
+        lp.precio_nuevo,
+        lp.diferencia_precio
+      FROM latest_price lp
+      JOIN prendas AS p ON lp.id_prenda = p.id
       JOIN marcas AS m ON p.id_marca = m.id
       JOIN categoria AS cat ON p.id_categoria = cat.id
       JOIN genero AS g ON p.id_genero = g.id
-      WHERE ${whereConditions.join(' AND ')}
-      ORDER BY diferencia_precio DESC
+      JOIN rango_edad AS re ON p.id_edad = re.id
+      ${whereClause}
+      ORDER BY lp.diferencia_precio DESC
       LIMIT 20;
     `;
 
