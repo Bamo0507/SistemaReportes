@@ -462,7 +462,7 @@ INSERT INTO prendas(nombre_prenda,descripcion,precio_actual,id_marca,id_categori
 ('Chaqueta Formal Blanco', 'Chaqueta Formal Blanco de alta calidad', 444.08, 7, 4, 2, 1),
 ('Vestido Ligera Gris', 'Vestido Ligera Gris de alta calidad', 221.75, 6, 5, 2, 1),
 ('Zapatos Denim Negro', 'Zapatos Denim Negro de alta calidad', 277.53, 5, 6, 2, 2),
-('Sudadera Casual Azul', 'Sudadera Casual Azul de alta calidad', 396.78, 4 7, 2, 1),
+('Sudadera Casual Azul', 'Sudadera Casual Azul de alta calidad', 396.78, 4, 7, 2, 1),
 ('Abrigo Deportiva Blanco', 'Abrigo Deportiva Blanco de alta calidad', 278.9, 3, 8, 1, 1),
 ('Traje Denim Gris', 'Traje Denim Gris de alta calidad', 150.47, 2, 9, 1, 3),
 ('Short Denim Negro', 'Short Denim Negro de alta calidad', 323.05, 1, 10, 2, 1),
