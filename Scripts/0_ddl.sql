@@ -176,13 +176,13 @@ BEGIN
     WHERE id_prenda = NEW.id_prenda
     FOR SHARE;
 
-    IF v_stock IS NULL THEN
+    IF v_stock = 0 THEN
         RAISE EXCEPTION 'La prenda % no tiene registro de inventario', NEW.id_prenda;
     END IF;
 
-    IF v_stock < NEW.cantidad THEN
+    IF v_stock <= NEW.cantidad THEN
         RAISE EXCEPTION 'Stock insuficiente para la prenda % (disponible %, solicitado %)',
-                        NEW.id_prenda, v_stock, NEW.cantidad;
+        NEW.id_prenda, v_stock, NEW.cantidad;
     END IF;
 
     NEW.monto := NEW.precio_venta * NEW.cantidad;
@@ -226,7 +226,7 @@ BEGIN
         v_tipo_venta,
         v_stock_before,
         v_stock_after,
-        -NEW.cantidad
+        NEW.cantidad
     );
 
     RETURN NULL;
