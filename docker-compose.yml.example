@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:14-alpine
-    env_file: .env.example // cambiar al .env
+    env_file: .env
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
@@ -10,7 +10,7 @@ services:
   backend:
     build:
       context: ./backend
-    env_file: .env.example // cambiar a .env
+    env_file: .env
     depends_on:
       - db
     ports:
@@ -19,7 +19,7 @@ services:
   frontend:
     build:
       context: ./frontend
-    env_file: .env.example // cambiar a .env
+    env_file: .env
     depends_on:
       - backend
     ports:
