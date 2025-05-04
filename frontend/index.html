@@ -46,7 +46,7 @@
           border: 1px solid var(--accent);
         }
         section.report-section {
-          padding: 0 4vw;
+          padding: 0 6vw;
         }
         .report-container {
           background-color: var(--tertiary);
@@ -64,6 +64,10 @@
           font-size: 1.5rem;
           cursor: pointer;
           color: var(--surface);
+          transition: color 0.3s ease;
+        }
+        #toggleArrow:hover {
+          color: var(--primary);
         }
         #filtrosContainer {
           display: none;
@@ -119,6 +123,7 @@
             border-radius: 4px;
             font-weight: bold;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
 
         button:hover {
@@ -130,7 +135,7 @@
         }
         .description-text {
           font-size: 1.2rem;
-          color: var(--muted);
+          color: var(--accent);
         }
         .report-title {
           font-size: 1.4rem;
@@ -140,10 +145,10 @@
           align-self: flex-end;
         }
         #filtrosContainer.show {
-          display: flex !important;
+          display: flex;
         }
         #toggleContent.show {
-          display: block !important;
+          display: block;
           margin-top: 1.5rem;
         }
         table {
@@ -177,12 +182,6 @@
     <!-- CDN para hacer graficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Permite expoertar pdfs -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <!-- Permite tomar capturas de lo que se muestra, es lo que se le pasa a JSpdf <==== -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
@@ -195,14 +194,21 @@
     const apiUrl = "http://localhost:3000";
 
     
-    // Contenedor de filtros
-    function FiltersGroup({ id, label, options, value, onChange }) {
+    // Dropdown de filtros
+    function FilterDropdown({ id, label, options, value, onChange }) {
       return (
           <div className="filter-group">
 
-            <select id={id} value={value} onChange={e => onChange(e.target.value)} placeholder=" ">
+            <select id={id} value={value} onChange={e => 
+              onChange(e.target.value)}>
+
+              {/* Opcion por defecto que seria sin filtro */}
               <option value="" />
-              {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+
+              {options.map(opt => 
+                <option key={opt} value={opt}>{opt}</option>
+              )}
+
             </select>
 
             <label htmlFor={id}>{label}</label>
@@ -211,17 +217,14 @@
     );
     }
 
-    // Toggle icon
+    // Toggle del panel de filtros
     function FilterToggle({ show, onToggle }) {
       return (
           <span
           id="toggleArrow"
           onClick={onToggle}
-          role="button"
-          tabIndex={0}
-          onKeyDown={e => (e.key === 'Enter'||e.key===' ') && onToggle()}
           >
-          {show ? "\u25BC" : "\u25B2"}
+          {show ? "▼" : "▲"}
           </span>
       );
     }
@@ -229,11 +232,12 @@
     // Panel completo de filtros con el boton de generar
     function FiltersForm({ visible, filters, setFilters, getData, configs }) {
       if (!visible) return null;
+      
       return (
           <div id="filtrosContainer" className="show">
 
             {configs.map(({ id, label, options }) => (
-                <FiltersGroup
+                <FilterDropdown
                 key={id}
                 id={id}
                 label={label}
@@ -250,7 +254,7 @@
       );
     }
 
-    // Generic report section
+    // Seccion de reporte
     function ReportSection({ title, endpoint, configs }) {
 
       const [show, setShow] = useState(false);
@@ -262,7 +266,6 @@
           if (chartInst.current) { chartInst.current.destroy(); }
       };
 
-
       const [filters, setFilters] = useState({});
       const [data, setData] = useState([]);
 
@@ -270,8 +273,6 @@
       const resultsRef = useRef(null);
       const chartRef = useRef(null);
       const chartInst = useRef(null);
-
-
 
       // Ejecutar Query y sacar el json
       const getData = async () => {
@@ -328,42 +329,6 @@
         }
         // Se ejecuta cada que cambia la data
       }, [data]);
-
-
-
-      // Exportar a PDF
-      const exportPdf = () => {
-        // Obtener la seccion de reporte correspondiente
-        const content = resultsRef.current;
-        if (!content) return;
-
-        // Toma una captura de lo que se tiene en content
-        html2canvas(content).then(canvas => {
-          // transforma el canvas en imagen 
-          const img = canvas.toDataURL('image/png');
-
-          // jalamos la libreria para pdfs
-          const { jsPDF } = window.jspdf;
-          // Se configura el pdf para ser horizontal, con unidades pt y en tamanio A4
-          const pdf = new jsPDF('l','pt','a4');
-
-          // Se coloca la imagen desde el extremo izuquierdo superior
-          // y se le da el tamaño del pdf
-          pdf.addImage(img, 'PNG',
-            0, 0,
-            pdf.internal.pageSize.getWidth(),
-            pdf.internal.pageSize.getHeight()
-          );
-
-          // Se genera un timestamp
-          const ts = new Date().toISOString().replace(/[:.]/g,'-');
-
-          // Se guarda el pdf con el titulo y el timestamp
-          pdf.save(`${title}-${ts}.pdf`);
-        });
-      };
-
-
       
       // Exportar a CSV
       const exportCsv = () => {
@@ -452,7 +417,6 @@
                         </div>
 
                         <div className="button-container">
-                          <button onClick={exportPdf}>Exportar PDF</button>
                           <button onClick={exportCsv} style={{ marginLeft: '0.5rem' }}>Exportar CSV</button>
                         </div>
 
@@ -501,6 +465,7 @@ function App() {
   }, []);
 
   const monthsAgoOptions = ["1","2","3","4", "5", "6", "7", "8", "9", "10", "11", "12"];
+  const minAmountOptions = ["100","500","1000"];
 
   // Configuracion Basica de lo que se muestra x report section
   const reportConfigs = [
@@ -512,7 +477,7 @@ function App() {
           { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
           { id: "category", label: "Categoría", options: categories },
           { id: "brand", label: "Marca", options: brands },
-          { id: "minAmount", label: "Gasto Mínimo", options: ["100","500","1000"] }
+          { id: "minAmount", label: "Gasto Mínimo", options: minAmountOptions }
         ]
       },
 
@@ -523,7 +488,7 @@ function App() {
           { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
           { id: "category", label: "Categoría", options: categories },
           { id: "brand", label: "Marca", options: brands },
-          { id: "minAmount", label: "Gasto Mínimo", options: ["100","500","1000"] }
+          { id: "minAmount", label: "Gasto Mínimo", options: minAmountOptions }
         ]
       },
 
@@ -534,18 +499,18 @@ function App() {
           { id: "category", label: "Categoría", options: categories },
           { id: "brand", label: "Marca", options: brands },
           { id: "gender", label: "Género", options: genders },
-          { id: "minAmount", label: "Precio Mínimo", options: ["100","500", "1000"] }
+          { id: "minAmount", label: "Precio Mínimo", options: ["100", "200", "300"] }
         ]
       },
 
       {
-        title: "Clientes con mayor cantidad de compras (por defecto de hace un mes)",
+        title: "Clientes con mayor cantidad de productos adquiridos (por defecto de hace un año)",
         endpoint: "/frequent-customers",
         configs: [
           { id: "monthsAgo", label: "Meses Atrás", options: monthsAgoOptions },
           { id: "category", label: "Categoría", options: categories },
           { id: "gender", label: "Género", options: genders },
-          { id: "minAmount", label: "Monto Mínimo", options: ["100","500","1000"] }
+          { id: "brand", label: "Marca", options: brands }
         ]
       },
 

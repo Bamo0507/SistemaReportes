@@ -100,22 +100,26 @@ app.get('/top-customers', async (req, res) => {
     // Condiciones dinámicas para WHERE
     const whereConditions = ['v.fecha_realizacion >= $1'];
     const values = [date];
+    let index = 2;
 
     if (category) {
-      whereConditions.push(`cat.nombre_categoria = $2`);
+      whereConditions.push(`cat.nombre_categoria = $${index}`);
       values.push(category);
+      index++;
     }
 
     if (brand) {
-      whereConditions.push(`m.nombre_marca = $3`);
+      whereConditions.push(`m.nombre_marca = $${index}`);
       values.push(brand);
+      index++;
     }
 
     // Condiciones dinámicas para HAVING (Para el monto)
-    const having = '';
+    let having = '';
     if (minAmount) {
-      having = 'HAVING SUM(vd.monto) >= $4';
+      having = `HAVING SUM(vd.monto) >= $${index++}`;
       values.push(parseFloat(minAmount));
+      index++;
     }
 
     // Construir la consulta SQL
@@ -161,28 +165,32 @@ app.get('/top-products', async (req, res) => {
     // Condicion de fecha
     const now = new Date();
     const date = new Date(
-      now.setMonth(now.getMonth() - (monthsAgo ? parseInt(monthsAgo) : 1))
+      now.setMonth(now.getMonth() - (monthsAgo ? parseInt(monthsAgo) : 12))
     );
     const whereConditions = ['v.fecha_realizacion >= $1'];
     const values = [date];
+    let index = 2;
 
     // Condiciones para categoria
     if (category) {
-      whereConditions.push(`cat.nombre_categoria = $2`);
+      whereConditions.push(`cat.nombre_categoria = $${index}`);
       values.push(category);
+      index++;
     }
 
     // Condiciones para marca
     if (brand) {
-      whereConditions.push(`m.nombre_marca = $3`);
+      whereConditions.push(`m.nombre_marca = $${index}`);
       values.push(brand);
+      index++;
     }
 
     // Condiciones para monto, con having ser sum
-    const having = '';
+    let having = '';
     if (minAmount) {
-      having = 'HAVING SUM(vd.monto) >= $4';
+      having = `HAVING SUM(vd.monto) >= $${index}`;
       values.push(parseFloat(minAmount));
+      index++;
     }
 
     // Construir la consulta SQL
@@ -192,8 +200,8 @@ app.get('/top-products', async (req, res) => {
       cat.nombre_categoria,
       m.nombre_marca,
       r.etiqueta,
-      SUM(vd.monto) AS total_vendido,
-      SUM(vd.cantidad) AS unidades_vendidas
+      SUM(vd.cantidad) AS unidades_vendidas,
+      SUM(vd.monto) AS total_vendido
       FROM prendas AS p
       JOIN venta_detalles AS vd ON p.id = vd.id_prenda
       JOIN ventas AS v ON vd.id_venta = v.id
@@ -201,7 +209,7 @@ app.get('/top-products', async (req, res) => {
       JOIN rango_edad AS r ON p.id_edad = r.id
       JOIN marcas AS m ON p.id_marca = m.id
       WHERE ${whereConditions.join(' AND ')}
-      GROUP BY p.id, p.nombre_prenda, cat.nombre_categoria, m.nombre_marca
+      GROUP BY p.id, p.nombre_prenda, cat.nombre_categoria, m.nombre_marca, r.etiqueta
       ${having}
       ORDER BY total_vendido DESC
       LIMIT 10;
@@ -230,23 +238,27 @@ app.get('/inventory', async (req, res) => {
     const minAmountValue = minAmount ? parseFloat(minAmount) : 0;
     const whereConditions = ['p.precio_actual >= $1'];
     const values = [minAmountValue];
+    let index = 2;
 
     // Condicion de categoria
     if (category) {
-      whereConditions.push(`cat.nombre_categoria = $2`);
+      whereConditions.push(`cat.nombre_categoria = $${index}`);
       values.push(category);
+      index++;
     }
 
     // Condicion de marca
     if (brand) {
-      whereConditions.push(`m.nombre_marca = $3`);
+      whereConditions.push(`m.nombre_marca = $${index}`);
       values.push(brand);
+      index++;
     }
 
     // Condicion de genero
     if (gender) {
-      whereConditions.push(`g.etiqueta = $4`);
+      whereConditions.push(`g.etiqueta = $${index}`);
       values.push(gender);
+      index++;
     }
 
     // Construir la consulta SQL
@@ -288,7 +300,7 @@ Genero de productos
 */
 app.get('/frequent-customers', async (req, res) => {
   try {
-    const { monthsAgo, minAmount, category, gender } = req.query;
+    const { monthsAgo, brand, category, gender } = req.query;
 
     // Hace un año por default
     // Condicion de fehca
@@ -298,24 +310,27 @@ app.get('/frequent-customers', async (req, res) => {
     );
     const whereConditions = ['v.fecha_realizacion >= $1'];
     const values = [date];
+    let index = 2;
 
     // Condicion de categoria
     if (category) {
-      whereConditions.push(`cat.nombre_categoria = $2`);
+      whereConditions.push(`cat.nombre_categoria = $${index}`);
       values.push(category);
+      index++;
     }
 
     // Condicion de genero
     if (gender) {
-      whereConditions.push(`g.etiqueta = $3`);
+      whereConditions.push(`g.etiqueta = $${index}`);
       values.push(gender);
+      index++;
     }
 
-    // Condicion de monto minimo
-    const having = '';
-    if (minAmount) {
-      having = 'HAVING SUM(vd.monto) >= $4';
-      values.push(parseFloat(minAmount));
+    // Condicion de marca
+    if (brand) {
+      whereConditions.push(`m.nombre_marca = $${index}`);
+      values.push(brand);
+      index++;
     }
 
     // Construir la consulta SQL
@@ -324,18 +339,18 @@ app.get('/frequent-customers', async (req, res) => {
       c.id,
       c.nombre,
       c.apellido,
-      COUNT(v.id) AS total_compras,
-      SUM(vd.monto) AS total_gastado
+      SUM(vd.monto) AS total_gastado,
+      SUM(vd.cantidad) AS cantidad_productos_adquiridos
       FROM clientes AS c
       JOIN ventas AS v ON c.id = v.id_cliente
       JOIN venta_detalles AS vd ON v.id = vd.id_venta
       JOIN prendas AS p ON vd.id_prenda = p.id
       JOIN categoria AS cat ON p.id_categoria = cat.id
       JOIN genero AS g ON p.id_genero = g.id
+      JOIN marcas AS m ON p.id_marca = m.id
       WHERE ${whereConditions.join(' AND ')}
       GROUP BY c.id, c.nombre, c.apellido
-      ${having}
-      ORDER BY total_compras DESC
+      ORDER BY cantidad_productos_adquiridos DESC
       LIMIT 10;
     `;
 
@@ -358,26 +373,32 @@ app.get('/price-history', async (req, res) => {
   try {
     const { ageRanges, brand, category, gender } = req.query;
 
+    const whereConditions = [];
     const values = [];
+    let index = 1;
 
     if (ageRanges) {
-      whereConditions.push(`re.etiqueta = $1`);
+      whereConditions.push(`r.etiqueta = $${index}`);
       values.push(ageRanges);
+      index++;
     }
 
     if (brand) {
-      whereConditions.push(`m.nombre_marca = $2`);
+      whereConditions.push(`m.nombre_marca = $${index}`);
       values.push(brand);
+      index++;
     }
 
     if (category) {
-      whereConditions.push(`cat.nombre_categoria = $3`);
+      whereConditions.push(`cat.nombre_categoria = $${index}`);
       values.push(category);
+      index++;
     }
 
     if (gender) {
-      whereConditions.push(`g.etiqueta = $4`);
+      whereConditions.push(`g.etiqueta = $${index}`);
       values.push(gender);
+      index++;
     }
 
     const whereClause = whereConditions.length
@@ -410,7 +431,7 @@ app.get('/price-history', async (req, res) => {
       JOIN marcas AS m ON p.id_marca = m.id
       JOIN categoria AS cat ON p.id_categoria = cat.id
       JOIN genero AS g ON p.id_genero = g.id
-      JOIN rango_edad AS r ON p.id_edad = re.id
+      JOIN rango_edad AS r ON p.id_edad = r.id
       ${whereClause}
       ORDER BY lp.diferencia_precio DESC
       LIMIT 20;
